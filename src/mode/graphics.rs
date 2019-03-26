@@ -15,6 +15,7 @@
 //! display.flush().unwrap();
 //! ```
 
+use core::fmt;
 use hal::blocking::delay::DelayMs;
 use hal::digital::OutputPin;
 
@@ -23,6 +24,9 @@ use crate::displaysize::DisplaySize;
 use crate::interface::DisplayInterface;
 use crate::mode::displaymode::DisplayModeTrait;
 use crate::properties::DisplayProperties;
+
+#[cfg(feature = "graphics")]
+use self::embedded_graphics::fonts::Font;
 
 // TODO: Add to prelude
 /// Graphics mode handler
@@ -158,7 +162,37 @@ where
     pub fn set_rotation(&mut self, rot: DisplayRotation) -> Result<(), ()> {
         self.properties.set_rotation(rot)
     }
+
+    /// Gets a writer for core::fmt
+    #[cfg(feature = "graphics")]
+    pub fn writer(&mut self) -> Writer<DI> {
+        Writer::new(self)
+    }
 }
+
+#[allow(missing_docs, dead_code)]
+#[cfg(feature = "graphics")]
+pub struct Writer<'a, DI> where
+    DI: DisplayInterface, {
+    inner: &'a mut GraphicsMode<DI>,
+}
+
+#[allow(missing_docs)]
+#[cfg(feature = "graphics")]
+impl<'a, DI: DisplayInterface> Writer<'a, DI> {
+    pub fn new(inner: &'a mut GraphicsMode<DI>) -> Writer<DI> {
+        Writer { inner }
+    }
+}
+
+#[cfg(feature = "graphics")]
+impl<'a, DI: DisplayInterface> fmt::Write for Writer<'a, DI> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.inner.draw(self::embedded_graphics::fonts::Font6x8::render_str(s).into_iter());
+        Ok(())
+    }
+}
+
 
 #[cfg(feature = "graphics")]
 extern crate embedded_graphics;
